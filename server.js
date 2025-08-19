@@ -1,9 +1,19 @@
-require("dotenv").config();
+require("dotenv").config({"override": true});
 const WebSocket = require("ws");
+const connectToDatabase = require("./database.js")
 
 const PORT = process.env.PORT;
 
 const webSocketServer = new WebSocket.Server({ port: PORT });
+let db;
+
+connectToDatabase()
+    .then((database) => {
+        db = database;
+    })
+    .catch((error) => {
+        process.exit(1);
+    });
 
 webSocketServer.on("connection", (ws) => {
     console.log("New client connected");
