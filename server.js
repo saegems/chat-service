@@ -1,6 +1,8 @@
 require("dotenv").config({"override": true});
 const WebSocket = require("ws");
-const connectToDatabase = require("./database.js")
+const connectToDatabase = require("./utils/database.js");
+const formatDateToMariaDB = require("./utils/format.js");
+const {encrypt, decrypt} = require("./utils/crypt.js");
 
 const PORT = process.env.PORT;
 
@@ -17,11 +19,22 @@ connectToDatabase()
 
 webSocketServer.on("connection", (ws) => {
     console.log("New client connected");
+    const messages = [];
 
     ws.on("message", (message) => {
         try {
             const data = JSON.parse(message);
             console.log(`Received: sender=${data.sender}, receiver=${data.receiver}, message=${data.message}`);
+
+            const messageData = {
+                "sender": data.sender,
+                "receiver": data.receiver,
+                "text": encrypt(data.message),
+                "status": "delivered",
+                "time": formatDateToMariaDB(new Date())
+            };
+
+            messages.push(messageData);
 
             ws.send(JSON.stringify({
                 status: "success",
@@ -37,6 +50,29 @@ webSocketServer.on("connection", (ws) => {
 
     ws.on("close", () => {
         console.log("Client disconnected");
+        if(messages.length > 0 && db) {
+            messages.forEach((message) => {
+                const query = `
+                INSERT INTO messages (sender, receiver, text, status, time)
+                VALUES (?, ?, ?, ?, ?)
+                `;
+                const values = [
+                    message.sender,
+                    message.receiver,
+                    message.text,
+                    message.status,
+                    message.time
+                ];
+                db.query(query, values, (error, results) => {
+                    if (error) {
+                        console.error(`Error inserting message into database: ${error}`);
+                        return;
+                    }
+                    console.log(`Message inserted successfully: ${results.insertId}`);
+                });
+            });
+            messages.length = 0;
+        }
     });
 
     ws.on("error", (error) => {
