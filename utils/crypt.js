@@ -1,47 +1,58 @@
 const CryptoJS = require("crypto-js");
-const KEY = process.env.KEY;
+
+const SECRET_KEY = process.env.SECRET_KEY;
+const INIT_VECTOR = process.env.INIT_VECTOR;
 
 function encrypt(text) {
     try {
-        const iv = CryptoJS.lib.WordArray.random(16);
+        if (!SECRET_KEY || !INIT_VECTOR) {
+            throw new Error("Secret key or init vector not initialized");
+        }
+        
+        const iv = CryptoJS.enc.Utf8.parse(INIT_VECTOR);
+        const key = CryptoJS.enc.Utf8.parse(SECRET_KEY);
+        
         const encrypted = CryptoJS.AES.encrypt(
             text,
-            CryptoJS.enc.Utf8.parse(KEY.padEnd(32, ' ')), 
+            key,
             {
                 iv: iv,
                 mode: CryptoJS.mode.CBC,
                 padding: CryptoJS.pad.Pkcs7
             }
         );
-        return iv.toString(CryptoJS.enc.Base64) + ':' + encrypted.ciphertext.toString(CryptoJS.enc.Base64);
+        
+        return encrypted.toString();
     } catch (error) {
         console.error('Encryption error:', error);
-        return null;
+        throw new Error("Encryption error: " + error.message);
     }
 }
 
-function decrypt(encryptedtext) {
+function decrypt(encryptedText) {
     try {
-        const parts = encryptedText.split(':');
-        if (parts.length !== 2) {
-            throw new Error('Invalid encrypted text format');
+        if (!SECRET_KEY || !INIT_VECTOR) {
+            throw new Error("Secret key or init vector not initialized");
         }
-        const iv = CryptoJS.enc.Base64.parse(parts[0]);
-        const ciphertext = CryptoJS.enc.Base64.parse(parts[1]);
+        
+        const iv = CryptoJS.enc.Utf8.parse(INIT_VECTOR);
+        const key = CryptoJS.enc.Utf8.parse(SECRET_KEY);
+        
         const decrypted = CryptoJS.AES.decrypt(
-            { ciphertext: ciphertext },
-            CryptoJS.enc.Utf8.parse(KEY.padEnd(32, ' ')),
+            encryptedText,
+            key,
             {
                 iv: iv,
                 mode: CryptoJS.mode.CBC,
                 padding: CryptoJS.pad.Pkcs7
             }
         );
+        
         return decrypted.toString(CryptoJS.enc.Utf8);
     } catch (error) {
         console.error('Decryption error:', error);
-        return null;
+        throw new Error("Decryption error: " + error.message);
     }
 }
 
-module.exports = {encrypt, decrypt};
+module.exports = { encrypt, decrypt };
