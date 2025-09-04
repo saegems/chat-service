@@ -2,7 +2,7 @@ require("dotenv").config({"override": true});
 const WebSocket = require("ws");
 const connectToDatabase = require("./utils/database.js");
 const formatDateToMariaDB = require("./utils/format.js");
-const {encrypt, decrypt} = require("./utils/crypt.js");
+const {encrypt, decrypt, compress, decompress} = require("./utils/crypt.js");
 
 const PORT = process.env.PORT;
 
@@ -24,18 +24,16 @@ webSocketServer.on("connection", (ws) => {
     ws.on("message", (message) => {
         try {
             const data = JSON.parse(message);
-            console.log(`Received: sender=${data.sender}, receiver=${data.receiver}, message=${data.message}`);
-
             const messageData = {
-                "sender": data.sender,
-                "receiver": data.receiver,
-                "text": encrypt(data.message),
+                "sender": compress(encrypt(data.sender)),
+                "receiver": compress(encrypt(data.receiver)),
+                "text": compress(encrypt(data.message)),
                 "status": "delivered",
                 "time": formatDateToMariaDB(new Date())
             };
-
             messages.push(messageData);
 
+            console.log(messageData);
             ws.send(JSON.stringify({
                 status: "success",
                 message: `Server received: ${data.message}`,

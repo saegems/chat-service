@@ -1,4 +1,5 @@
 const CryptoJS = require("crypto-js");
+const pako = require("pako");
 
 const SECRET_KEY = process.env.SECRET_KEY;
 const INIT_VECTOR = process.env.INIT_VECTOR;
@@ -55,4 +56,31 @@ function decrypt(encryptedText) {
     }
 }
 
-module.exports = { encrypt, decrypt };
+function compress(encrypted) {
+    try {
+        const inputBytes = new TextEncoder().encode(encrypted);
+        const compressedBytes = pako.deflate(inputBytes, { level: 6 });
+        const compressedString = btoa(String.fromCharCode.apply(null, compressedBytes));
+        
+        if (compressedString.length > 255) {
+            throw new Error("Compressed string exceeds 255 characters");
+        }
+        return compressedString;
+    } catch (error) {
+        console.error('Compression error:', error);
+        throw new Error("Compression error: " + error.message);
+    }
+}
+
+function decompress(compressed) {
+    try {
+        const compressedBytes = new Uint8Array(atob(compressed).split('').map(char => char.charCodeAt(0)));
+        const decompressedBytes = pako.inflate(compressedBytes);
+        return new TextDecoder('utf-8').decode(decompressedBytes);
+    } catch (error) {
+        console.error('Decompression error:', error);
+        throw new Error("Decompression error: " + error.message);
+    }
+}
+
+module.exports = { encrypt, decrypt, compress, decompress };
