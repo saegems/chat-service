@@ -1,4 +1,3 @@
-// server.js
 require("dotenv").config({"override": true});
 const WebSocket = require("ws");
 const connectToDatabase = require("./utils/database.js");
