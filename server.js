@@ -5,7 +5,7 @@ const formatDateToMariaDB = require("./utils/format.js");
 const { encrypt, decrypt, compress, decompress } = require("./utils/crypt.js");
 const { setupHeartbeat } = require("./utils/heartbeat.js"); 
 
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT;
 
 const webSocketServer = new WebSocket.Server({ port: PORT });
 let db;
