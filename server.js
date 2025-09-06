@@ -1,9 +1,9 @@
-// server.js
 require("dotenv").config({"override": true});
 const WebSocket = require("ws");
 const connectToDatabase = require("./utils/database.js");
 const formatDateToMariaDB = require("./utils/format.js");
-const {encrypt, decrypt, compress, decompress} = require("./utils/crypt.js");
+const { encrypt, decrypt, compress, decompress } = require("./utils/crypt.js");
+const { setupHeartbeat } = require("./utils/heartbeat.js"); 
 
 const PORT = process.env.PORT || 8000;
 
@@ -20,6 +20,8 @@ connectToDatabase()
 
 const activeConnections = new Map();
 const userConnections = new Map(); 
+
+const heartbeatInterval = setupHeartbeat(webSocketServer, activeConnections, userConnections);
 
 webSocketServer.on("connection", (ws) => {
     console.log("New client connected");
@@ -41,7 +43,7 @@ webSocketServer.on("connection", (ws) => {
     ws.on("message", (message) => {
         try {
             const data = JSON.parse(message);
-            console.log(`Received message from ${data.sender} to ${data.receiver}`);
+            console.log(`Received message`);
             
             const connectionData = activeConnections.get(ws);
             if (connectionData && !connectionData.username) {
@@ -80,10 +82,10 @@ webSocketServer.on("connection", (ws) => {
                     time: formatDateToMariaDB(new Date())
                 };
                 receiverConnection.send(JSON.stringify(receiverMessage));
-                console.log(`Message forwarded to ${data.receiver}`);
+                console.log(`Message forwarded`);
             }
             
-            console.log(`Message delivered from ${data.sender} to ${data.receiver}`);
+            console.log(`Message delivered`);
             
         } catch (error) {
             console.log(`Invalid message format: ${error}`);
@@ -139,26 +141,9 @@ webSocketServer.on("connection", (ws) => {
     console.log(`Active connections: ${activeConnections.size}`);
 });
 
-const heartbeatInterval = setInterval(() => {
-    webSocketServer.clients.forEach((ws) => {
-        if (ws.isAlive === false) {
-            console.log("Terminating inactive connection");
-            const connectionData = activeConnections.get(ws);
-            if (connectionData && connectionData.username) {
-                userConnections.delete(connectionData.username);
-            }
-            activeConnections.delete(ws);
-            return ws.terminate();
-        }
-        
-        ws.isAlive = false;
-        ws.ping(() => {}); 
-    });
-}, 30000); 
-
 webSocketServer.on('close', () => {
     clearInterval(heartbeatInterval);
     console.log("WebSocket server closed");
 });
 
-console.log(`Server running on ws://localhost:${PORT}`);
+console.log(`Server running on port: ${PORT}`);
