@@ -5,7 +5,7 @@ This project implements a  WebSocket server using Node.js and the `ws` library.
 ## Prerequisites
 - [Node.js](https://nodejs.org/) (v14 or higher recommended)
 - [npm](https://www.npmjs.com/) (comes with Node.js)
-- A `.env` file with a `HOST`, `USER`, `PASSWORD`, `DATABASE` variables.
+- A `.env` file with a `DB_PORT`,`HOST`, `USER`, `PASSWORD`, `DATABASE` variables.
 - The `.env` files should also contain a `PORT` variable. (e.g., `PORT=8080`)
 
 ## Installation
